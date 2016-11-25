@@ -24,7 +24,6 @@
 #include "RooFitResult.h"
 #include "RooBinning.h"
 #include "Error.C"
-
 //default drawing options
 const Double_t defaultXAxisLabelSize = 0.05;
 const Int_t defaultCanvasWidth = 600;
@@ -779,13 +778,16 @@ void scaleAndAdd(const vector<string>& canvasNames, TFile* in, const vector<stri
 		 const float weight, vector<T*>& hists, const unsigned int fileIndex, 
 		 const vector<Int_t>& blindLow, const vector<Int_t>& blindHigh)
 {
+  std::cout<<"inside scaleAndAdd"<<std::endl;
   for (vector<string>::const_iterator iCanvasName = canvasNames.begin(); 
        iCanvasName != canvasNames.end(); ++iCanvasName) {
     const unsigned int canvasIndex = iCanvasName - canvasNames.begin();
     TCanvas* pCanvas;
+    std::cout<<"before get TH1D"<<std::endl;
+    std::cout<<(iCanvasName->c_str())<<std::endl;
     in->GetObject(iCanvasName->c_str(), pCanvas);
     T* pHist = (T*)pCanvas->GetPrimitive(graphNames[canvasIndex].c_str());
-
+    std::cout<<"after get TH1D"<<std::endl;
     //include overflows in last bin
     Int_t lastBin = pHist->GetNbinsX();
     Double_t lastBinErr = pHist->GetBinError(lastBin);
@@ -1001,7 +1003,7 @@ void drawMultipleEfficiencyGraphsOn1Canvas(const string& outputFileName,
 	if (weights[fileIndex] == 0.0) weight = 1.0/pHist->Integral(0, -1);
 	setHistogramOptions(pHist, colors[fileIndex], 0.7, styles[fileIndex], 
 			    weight, 
-			    pHist->GetXaxis()->GetTitle());
+			    pHist->GetXaxis()->GetTitle(), pHist->GetYaxis()->GetTitle());
 	if (string(pHist->GetName()) == "muHadMass") {
 	  cout << "Processing file " << *iInputFile << endl;
 	  Double_t mGeq4GeVErr = 0.0;
@@ -1157,13 +1159,11 @@ bool lessThanNeg2(int i) { return (i < -2); }
 //blindHigh = -2 ==> don't blind anything
 void haddCanvases(const string& outputFileName, const vector<string>& inputFiles, 
 		  const vector<float>& weights, const vector<string>& canvasNames1D, 
-		  const vector<string>& graphNames1D, const vector<string>& canvasNames2D, 
-		  const vector<string>& graphNames2D, const vector<Int_t>& blindLow, 
+		  const vector<string>& graphNames1D, const vector<Int_t>& blindLow, 
 		  const vector<Int_t>& blindHigh)
 {
   if ((inputFiles.size() > weights.size()) || (canvasNames1D.size() != graphNames1D.size()) || 
-      (graphNames1D.size() != blindLow.size()) || (blindLow.size() != blindHigh.size()) || 
-      (canvasNames2D.size() != graphNames2D.size())) {
+      (graphNames1D.size() != blindLow.size()) || (blindLow.size() != blindHigh.size())) {
     cerr << "Error: vector size mismatch.\n";
     return;
   }
@@ -1172,34 +1172,27 @@ void haddCanvases(const string& outputFileName, const vector<string>& inputFiles
     cerr << "Error: blindLow should be in [0, inf) and blindHigh should be in [-2, inf).\n";
     return;
   }
+
   TFile outStream(outputFileName.c_str(), "RECREATE");
   vector<TFile*> inputStreams;
   vector<TCanvas*> outputCanvases1D;
-  vector<TCanvas*> outputCanvases2D;
   vector<TH1F*> hists1D;
-  vector<TH2F*> hists2D;
   setup(canvasNames1D, outputCanvases1D, hists1D);
-  setup(canvasNames2D, outputCanvases2D, hists2D, true);
-  vector<Int_t> nullBlindLow(canvasNames2D.size(), 0);
-  vector<Int_t> nullBlindHigh(canvasNames2D.size(), -2);
   for (vector<string>::const_iterator iInputFile = inputFiles.begin(); 
        iInputFile != inputFiles.end(); ++iInputFile) {
     const unsigned int fileIndex = iInputFile - inputFiles.begin();
+    std::cout<<(iInputFile->c_str())<<std::endl;
     inputStreams.push_back(new TFile(iInputFile->c_str()));
+    cout<<"before scale and add"<<std::endl;
     scaleAndAdd(canvasNames1D, inputStreams[inputStreams.size() - 1], graphNames1D, 
 		weights[fileIndex], hists1D, fileIndex, blindLow, blindHigh);
-    scaleAndAdd(canvasNames2D, inputStreams[inputStreams.size() - 1], graphNames2D, 
-		weights[fileIndex], hists2D, fileIndex, nullBlindLow, nullBlindHigh);
   }
   draw(canvasNames1D, outStream, outputCanvases1D, hists1D);
-  draw(canvasNames2D, outStream, outputCanvases2D, hists2D);
   outStream.cd();
   write(outputCanvases1D);
-  write(outputCanvases2D);
   outStream.Write();
   outStream.Close();
   deleteObjects(outputCanvases1D);
-  deleteObjects(outputCanvases2D);
   deleteStreams(inputStreams);
 }
 
