@@ -55,19 +55,22 @@ void formatDataBkgPlots(const string& inputVersion, const string& outputVersion,
   vector<string> legendHeaders19p7InvFb(canvasNames1D.size(), "Normalized to 19.7 fb^{-1}");
   vector<Color_t> colorsMCData;
   colorsMCData.push_back(kCyan + 2); //ZZ
+  colorsMCData.push_back(kBlue + 1); //Drell-Yan
   vector<Style_t> styles;
   styles.push_back(22); //ZZ
+  styles.push_back(27); //Drell-Yan
   vector<string> legendEntriesMCData;
   legendEntriesMCData.push_back("Data 19.7 fb^{-1}");
   legendEntriesMCData.push_back("ZZ");
+  legendEntriesMCData.push_back("Drell-Yan + jets");
   const bool setLogY = true;
   const bool drawStack = true;
   const bool drawSame = false;
   const bool dataMC = false;
 
   //best available weights according to Dropbox spreadsheet
-  vector<float> weightsMCData(8, 1.0); //MC samples already properly weighted during hadding
-
+  vector<float> weightsMCData(2.0,1.0 ); //MC samples already properly weighted during hadding
+  cout<<"weightsMCData.size()="<<weightsMCData.size()<<std::endl;
   //space-saving constant definitions
   string user(gSystem->GetFromPipe("whoami").Data());
   const string analysisFilePath("/afs/cern.ch/work/m/" + user+"/public/data1/");
@@ -79,6 +82,7 @@ void formatDataBkgPlots(const string& inputVersion, const string& outputVersion,
   const string outputVTag("_" + outputVersion);
   const string TTJetsVTag("_" + inputVersion);
   const string ZZVTag("_" + inputVersion);
+  const string DYJetsToLLVTag("_" + inputVersion);
 
   cout << "Begin hadding...\n";
 
@@ -94,17 +98,30 @@ void formatDataBkgPlots(const string& inputVersion, const string& outputVersion,
   ZZAllName << ZZAllPrefix << ZZSuffix;
   ZZAllHaddInputFiles.push_back(ZZAllName.str());
   haddCanvases(ZZAllHaddOutputFile, ZZAllHaddInputFiles, 
-	       vector<float>(1, /*0.0377509625152821*/0.035488476), canvasNames1D, graphNames1D, 
+	       vector<float>(1,0.00313), canvasNames1D, graphNames1D, 
 	       nullBlindLow, nullBlindHigh);
 
-  string dataVsMCOutputFile(analysisFilePath + "results/dataVsMC_muHadAllAnalysis" + MTBin + 
-			    tag19p7InvFb + outputVTag + fileExt);
+
+cout << "...Drell-Yan\n";
+  string DYJetsToLLSuffix(DYJetsToLLVTag + fileExt);
+  string DYJetsToLLAllPrefix(analysisFilePath + "DYLow/analysis/muHadAnalysis" + MTBin + 
+			     "_DYLow");
+  string DYJetsToLLAllHaddOutputFile(DYJetsToLLAllPrefix + "_hadd"+ DYJetsToLLSuffix);
+  vector<string> DYJetsToLLAllHaddInputFiles;
+  stringstream DYJetsToLLAllName;
+  DYJetsToLLAllName << DYJetsToLLAllPrefix <<  DYJetsToLLSuffix;
+  DYJetsToLLAllHaddInputFiles.push_back(DYJetsToLLAllName.str());
+  haddCanvases(DYJetsToLLAllHaddOutputFile, DYJetsToLLAllHaddInputFiles, 
+	       vector<float>(1,12.04), canvasNames1D, graphNames1D, nullBlindLow, nullBlindHigh);
+  
+  string dataVsMCOutputFile(analysisFilePath + "results/dataVsMC_muHadAllAnalysis" + MTBin +
+                            tag19p7InvFb + outputVTag + fileExt);
   vector<string> dataVsMCInputFiles;
   dataVsMCInputFiles.push_back(ZZAllHaddOutputFile);
+  dataVsMCInputFiles.push_back(DYJetsToLLAllHaddOutputFile);
   cout << "\nPlot data vs. MC normalized to data luminosity\n---\n";
-  drawMultipleEfficiencyGraphsOn1Canvas(dataVsMCOutputFile, dataVsMCInputFiles, 
-					canvasNames1D, graphNames1D, legendHeaders19p7InvFb, 
-					colorsMCData, styles, legendEntriesMCData, 
-					weightsMCData, setLogY, drawStack, dataMC);
-
+  drawMultipleEfficiencyGraphsOn1Canvas(dataVsMCOutputFile, dataVsMCInputFiles,
+                                        canvasNames1D, graphNames1D, legendHeaders19p7InvFb,
+                                        colorsMCData, styles, legendEntriesMCData,
+                                        weightsMCData, setLogY, drawStack, dataMC);
 }
